@@ -1,18 +1,13 @@
-import discord
 from discord.ext import commands, tasks
+import discord
 import asyncio
 import os
 
-DISCORD_TOKEN = os.getenv("discord_token")
 
 intents = discord.Intents().all()
 client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='!', intents=intents)
-
-ffmpeg_options = {
-    'options': '-vn'
-}
-
+DISCORD_TOKEN = os.getenv("discord_token")
 music_queue = []
 
 
