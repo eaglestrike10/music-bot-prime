@@ -92,7 +92,7 @@ async def add(ctx):  # triggers when a message is sent
                     r = requests.get(attachment.url, allow_redirects=True)  # if not, download file from url
                     # write contents of download request to folder
                     open(os.path.join(music_lib_dir, attachment.filename), 'wb').write(r.content)
-                    await ctx.send("Added track: ".format(attachment.filename))
+                    await ctx.send("Added track: {}".format(attachment.filename))
                 else:
                     await ctx.send("Track is already in library: {}".format(attachment.filename))
             else:
