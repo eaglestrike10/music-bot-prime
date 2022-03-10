@@ -1,6 +1,7 @@
 from discord.ext import commands, tasks
 import discord
 import asyncio
+import requests
 import os
 
 
@@ -116,6 +117,20 @@ def format_song_list(song_list, message_header="Here's a list"):
     message += "\n```"
 
     return message
+
+
+@client.event
+async def on_message(msg):   #triggers when a message is sent
+    if msg.author == client.user:   #prevent recursion if sender is bot
+        return
+    elif msg.attachments:   #if message has an attached file or image
+        for attachment in msg.attachments:
+            if attachment.content_type == "mp3":    #check attachment type
+                if not attachment.filename in os.listdir("music"):  #check if file already exists
+                    r = requests.get(attachment.url, allow_redirects=True)  #if not, download file from url
+                    open("music\\"+attachment.filename, 'wb').write(r.content)    #write contents of download request to folder
+            
+
 
 
 if __name__ == "__main__":
