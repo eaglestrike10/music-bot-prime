@@ -100,9 +100,7 @@ async def queue(ctx):
 
 @bot.command(name='add', help='Adds song to library')
 async def add(ctx):  # triggers when a message is sent
-    if ctx.message.author == client.user:  # prevent recursion if sender is bot
-        return
-    elif ctx.message.attachments:  # if message has an attached file or image
+    if ctx.message.attachments:  # if message has an attached file or image
         for attachment in ctx.message.attachments:
             if attachment.content_type in file_formats:  # check attachment type
                 if attachment.filename not in os.listdir(music_dir):  # check if file already exists
@@ -111,7 +109,7 @@ async def add(ctx):  # triggers when a message is sent
                     open(os.path.join("music_dir", attachment.filename), 'wb').write(r.content)
                     await ctx.send("Added track: ".format(attachment.filename))
                 else:
-                    await ctx.send("Track is already added to library".format(attachment.content_type))
+                    await ctx.send("Track is already in library: {}".format(attachment.filename))
             else:
                 await ctx.send("Unsupported file format {}".format(attachment.content_type))
 
