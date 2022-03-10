@@ -106,7 +106,6 @@ boot.env
 .env
 .venv
 env/
-venv/
 ENV/
 env.bak/
 venv.bak/
@@ -128,6 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Pycharm
+.idea/
 
 # Music directory
 /music
