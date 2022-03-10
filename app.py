@@ -4,11 +4,12 @@ import asyncio
 import requests
 import os
 
-
 intents = discord.Intents().all()
 client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='!', intents=intents)
 DISCORD_TOKEN = os.getenv("discord_token")
+file_formats = ["audio/mpeg", "video/webm"]
+music_dir = "music/"
 music_queue = []
 
 
@@ -82,7 +83,7 @@ async def stop(ctx):
 
 @bot.command(name='list', help='Returns a list of all tracks in library')
 async def list_tracks(ctx):
-    song_list = os.listdir("music")
+    song_list = os.listdir(music_dir)
     message_header = "Here's a list of all tracks on the system:"
     await ctx.send(format_song_list(song_list, message_header))
 
@@ -95,6 +96,24 @@ async def queue(ctx):
         return
     message_header = "Current queue:"
     await ctx.send(format_song_list(music_queue, message_header))
+
+
+@bot.command(name='add', help='Adds song to library')
+async def add(ctx):  # triggers when a message is sent
+    if ctx.message.author == client.user:  # prevent recursion if sender is bot
+        return
+    elif ctx.message.attachments:  # if message has an attached file or image
+        for attachment in ctx.message.attachments:
+            if attachment.content_type in file_formats:  # check attachment type
+                if attachment.filename not in os.listdir(music_dir):  # check if file already exists
+                    r = requests.get(attachment.url, allow_redirects=True)  # if not, download file from url
+                    # write contents of download request to folder
+                    open(os.path.join("music_dir", attachment.filename), 'wb').write(r.content)
+                    await ctx.send("Added track: ".format(attachment.filename))
+                else:
+                    await ctx.send("Track is already added to library".format(attachment.content_type))
+            else:
+                await ctx.send("Unsupported file format {}".format(attachment.content_type))
 
 
 @tasks.loop(seconds=5)
@@ -117,20 +136,6 @@ def format_song_list(song_list, message_header="Here's a list"):
     message += "\n```"
 
     return message
-
-
-@client.event
-async def on_message(msg):   #triggers when a message is sent
-    if msg.author == client.user:   #prevent recursion if sender is bot
-        return
-    elif msg.attachments:   #if message has an attached file or image
-        for attachment in msg.attachments:
-            if attachment.content_type == "mp3":    #check attachment type
-                if not attachment.filename in os.listdir("music"):  #check if file already exists
-                    r = requests.get(attachment.url, allow_redirects=True)  #if not, download file from url
-                    open("music\\"+attachment.filename, 'wb').write(r.content)    #write contents of download request to folder
-            
-
 
 
 if __name__ == "__main__":
