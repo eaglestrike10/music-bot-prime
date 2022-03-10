@@ -112,9 +112,9 @@ async def on_message(msg):   #triggers when a message is sent
         return
     elif msg.attachments:   #if message has an attached file or image
         for attachment in msg.attachments:
-            if attachment.content_type == "mp3":
-                if not attachment.filename in os.listdir("music"):
-                    r = requests.get(attachment.url, allow_redirects=True)
+            if attachment.content_type == "mp3":    #check attachment type
+                if not attachment.filename in os.listdir("music"):  #check if file already exists
+                    r = requests.get(attachment.url, allow_redirects=True)  #if not, download file from url
                     open(attachment.filename, 'wb').write(r.content)
             
 
