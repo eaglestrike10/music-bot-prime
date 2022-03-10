@@ -7,7 +7,7 @@ import os
 intents = discord.Intents().all()
 client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='!', intents=intents)
-DISCORD_TOKEN = os.getenv("discord_token")
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 file_formats = ["audio/mpeg", "video/webm"]
 music_dir = "music/"
 music_queue = []
