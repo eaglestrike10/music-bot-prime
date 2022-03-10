@@ -64,12 +64,6 @@ async def stop(ctx):
     voice_client = ctx.message.guild.voice_client
     await voice_client.disconnect()  # disconnect
     music_queue = []
-    # await voice_client.stop()
-
-    # if voice_client: #if connected to voice channel
-    #     if voice_client.is_playing():   #if there is a queue, clear queue and stop music
-    # else:   #if not connected to voice channel
-    #     await ctx.send("The bot is not playing anything at the moment.")
 
 
 @bot.command(name='list', help='Returns a list of all tracks in library')
