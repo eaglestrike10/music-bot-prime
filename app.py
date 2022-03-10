@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import subprocess
 import asyncio
+import requests
 import os
 
 DISCORD_TOKEN = os.getenv("discord_token")
@@ -103,6 +104,20 @@ def get_music_length(music_track):
     duration = float(ret.split('duration=')[1].split("\n")[0])  # Formatting return
 
     return duration + 5                                         # Return with 5 seconds of margin
+
+
+@client.event
+async def on_message(msg):   #triggers when a message is sent
+    if msg.author == client.user:   #prevent recursion if sender is bot
+        return
+    elif msg.attachments:   #if message has an attached file or image
+        for attachment in msg.attachments:
+            if attachment.content_type == "mp3":
+                if not attachment.filename in os.listdir("music"):
+                    r = requests.get(attachment.url, allow_redirects=True)
+                    open(attachment.filename, 'wb').write(r.content)
+            
+
 
 
 if __name__ == "__main__":
