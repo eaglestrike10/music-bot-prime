@@ -9,7 +9,7 @@ client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='!', intents=intents)
 DISCORD_TOKEN = os.getenv("discord_token")
 file_formats = ["audio/mpeg", "video/webm"]
-music_dir = "music/"
+music_lib_dir = "music"
 music_queue = []
 
 
@@ -83,7 +83,7 @@ async def stop(ctx):
 
 @bot.command(name='list', help='Returns a list of all tracks in library')
 async def list_tracks(ctx):
-    song_list = os.listdir(music_dir)
+    song_list = os.listdir(music_lib_dir)
     message_header = "Here's a list of all tracks on the system:"
     await ctx.send(format_song_list(song_list, message_header))
 
@@ -103,10 +103,10 @@ async def add(ctx):  # triggers when a message is sent
     if ctx.message.attachments:  # if message has an attached file or image
         for attachment in ctx.message.attachments:
             if attachment.content_type in file_formats:  # check attachment type
-                if attachment.filename not in os.listdir(music_dir):  # check if file already exists
+                if attachment.filename not in os.listdir(music_lib_dir):  # check if file already exists
                     r = requests.get(attachment.url, allow_redirects=True)  # if not, download file from url
                     # write contents of download request to folder
-                    open(os.path.join("music_dir", attachment.filename), 'wb').write(r.content)
+                    open(os.path.join(music_lib_dir, attachment.filename), 'wb').write(r.content)
                     await ctx.send("Added track: ".format(attachment.filename))
                 else:
                     await ctx.send("Track is already in library: {}".format(attachment.filename))
