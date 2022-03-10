@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands, tasks
-import subprocess
 import asyncio
 import os
 
@@ -65,8 +64,8 @@ async def resume(ctx):
         await ctx.send("The bot was not playing anything before this. Use play command")
 
 
-@bot.command(name='stop', help='Stops the song')
-async def stop(ctx):
+@bot.command(name='skip', help='Skips the current song')
+async def skip(ctx):
     voice_client = ctx.message.guild.voice_client
     if voice_client.is_playing():
         await voice_client.stop()
@@ -74,15 +73,32 @@ async def stop(ctx):
         await ctx.send("The bot is not playing anything at the moment.")
 
 
-@bot.command(name='list', help='Returns a list of all tracks in library')
+@bot.command(name='stop', help='Stops playing and clears the queue')
 async def stop(ctx):
-    song_list = "Here's a list of all tracks \n```\n"
+    global music_queue
+    voice_client = ctx.message.guild.voice_client
+    if voice_client.is_playing():
+        music_queue = []
+        await voice_client.stop()
+    else:
+        await ctx.send("The bot is not playing anything at the moment.")
 
-    for s in os.listdir("music"):
-        song_list += ("music/{}\n".format(s))
-    song_list += "\n```"
 
-    await ctx.send(song_list)
+@bot.command(name='list', help='Returns a list of all tracks in library')
+async def list_tracks(ctx):
+    song_list = os.listdir("music")
+    message_header = "Here's a list of all tracks on the system:"
+    await ctx.send(format_song_list(song_list, message_header))
+
+
+@bot.command(name='queue', help='Returns the current queue')
+async def queue(ctx):
+    global music_queue
+    if not music_queue:
+        await ctx.send("Queue is currently empty")
+        return
+    message_header = "Current queue:"
+    await ctx.send(format_song_list(music_queue, message_header))
 
 
 @tasks.loop(seconds=5)
@@ -90,19 +106,21 @@ async def play_track(ctx):
     server = ctx.message.guild
     voice_channel = server.voice_client
     while len(music_queue) > 0:
-        music_track = music_queue.pop(0)
+        music_track = "music/{}".format(music_queue.pop(0))
+        if not os.path.exists(music_track):
+            await ctx.send("Does not exist: {}".format(music_track))
         voice_channel.play(discord.FFmpegPCMAudio(executable="ffmpeg", source=music_track))
-        await asyncio.sleep(get_music_length(music_track))
+        while voice_channel.is_playing():
+            await asyncio.sleep(3)
 
 
-def get_music_length(music_track):
-    args = ["ffprobe", "-show_entries", "format=duration", "-i", music_track]
-    popen = subprocess.Popen(args, stdout=subprocess.PIPE)
-    popen.wait()
-    ret = popen.stdout.read().decode("utf-8")                   # ffprobe return
-    duration = float(ret.split('duration=')[1].split("\n")[0])  # Formatting return
+def format_song_list(song_list, message_header="Here's a list"):
+    message = "{} \n```\n".format(message_header)
+    for s in song_list:
+        message += (s + '\n')
+    message += "\n```"
 
-    return duration + 5                                         # Return with 5 seconds of margin
+    return message
 
 
 if __name__ == "__main__":
