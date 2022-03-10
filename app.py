@@ -12,35 +12,46 @@ file_formats = ["audio/mpeg", "video/webm"]
 music_dir = "music/"
 music_queue = []
 
+#depricated
+#@bot.command(name='join', help='Tells the bot to join the voice channel')
+#async def join(ctx):
+#    play_track.start(ctx)
+#    if not ctx.message.author.voice:
+#        await ctx.send("{} is not connected to a voice channel".format(ctx.message.author.name))
+#        return
+#    else:
+#        channel = ctx.message.author.voice.channel
+#    await channel.connect()
 
-@bot.command(name='join', help='Tells the bot to join the voice channel')
-async def join(ctx):
-    play_track.start(ctx)
-    if not ctx.message.author.voice:
-        await ctx.send("{} is not connected to a voice channel".format(ctx.message.author.name))
-        return
-    else:
-        channel = ctx.message.author.voice.channel
-    await channel.connect()
 
-
-@bot.command(name='leave', help='To make the bot leave the voice channel')
-async def leave(ctx):
-    voice_client = ctx.message.guild.voice_client
-    if voice_client.is_connected():
-        await voice_client.disconnect()
-    else:
-        await ctx.send("The bot is not connected to a voice channel.")
+#depricated
+#@bot.command(name='leave', help='To make the bot leave the voice channel')
+#async def leave(ctx):
+#    voice_client = ctx.message.guild.voice_client
+#    if voice_client.is_connected():
+#        await voice_client.disconnect()
+#    else:
+#        await ctx.send("The bot is not connected to a voice channel.")
 
 
 @bot.command(name='play', help='To play song')
 async def play(ctx, music_track):
-    try:
-        async with ctx.typing():
-            music_queue.append(music_track)
-        await ctx.send('**Added to queue:** {}'.format(music_track))
-    except:
-        await ctx.send("There was an error playing the track")
+    voice_client = ctx.message.guild.voice_client
+    if not voice_client.is_connected():   #check if user issuing command is connected to a channel
+
+        if not ctx.message.author.voice:    #if not, write error
+            await ctx.send("{} is not connected to a voice channel".format(ctx.message.author.name))
+            return
+        else:   #attempt connection to voice channel
+            channel = ctx.message.author.voice.channel
+        await channel.connect()
+    else:
+        try:    #if already connected to voice channel
+            async with ctx.typing():
+                music_queue.append(music_track)
+            await ctx.send('**Added to queue:** {}'.format(music_track))
+        except:
+            await ctx.send("There was an error playing the track")  
 
 
 @bot.command(name='pause', help='This command pauses the song')
@@ -70,14 +81,16 @@ async def skip(ctx):
         await ctx.send("The bot is not playing anything at the moment.")
 
 
-@bot.command(name='stop', help='Stops playing and clears the queue')
+@bot.command(name='stop', help='Stops playing, clears the queue, and disconnect the bot')
 async def stop(ctx):
     global music_queue
     voice_client = ctx.message.guild.voice_client
-    if voice_client.is_playing():
-        music_queue = []
-        await voice_client.stop()
-    else:
+    if voice_client.is_connected(): #if connected to voice channel
+        if voice_client.is_playing():   #if there is a queue, clear queue and stop music
+            music_queue = []
+            await voice_client.stop()
+        await voice_client.disconnect()     # disconnect
+    else:   #if not connected to voice channel
         await ctx.send("The bot is not playing anything at the moment.")
 
 
