@@ -115,7 +115,7 @@ async def on_message(msg):   #triggers when a message is sent
             if attachment.content_type == "mp3":    #check attachment type
                 if not attachment.filename in os.listdir("music"):  #check if file already exists
                     r = requests.get(attachment.url, allow_redirects=True)  #if not, download file from url
-                    open(attachment.filename, 'wb').write(r.content)
+                    open("music\\"+attachment.filename, 'wb').write(r.content)    #write contents of download request to folder
             
 
 
