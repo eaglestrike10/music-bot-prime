@@ -40,7 +40,7 @@ async def play(ctx, track_name=None):
 async def pause(ctx):
     voice_client = ctx.message.guild.voice_client
     if voice_client.is_playing():
-        await voice_client.pause()
+        voice_client.pause()
     else:
         await ctx.send("The bot is not playing anything at the moment.")
 
@@ -49,7 +49,7 @@ async def pause(ctx):
 async def resume(ctx):
     voice_client = ctx.message.guild.voice_client
     if voice_client.is_paused():
-        await voice_client.resume()
+        voice_client.resume()
     else:
         await ctx.send("The bot was not playing anything before this. Use play command")
 
@@ -126,7 +126,8 @@ async def play_track(ctx):
             return
         voice_channel.play(discord.FFmpegPCMAudio(executable="ffmpeg", source=track_path))
         await ctx.send("**Now Playing:** {}".format(track_name))
-        while voice_channel.is_playing():
+        # Wait if voice channel is playing or is paused
+        while voice_channel.is_playing() or voice_channel.is_paused():
             await asyncio.sleep(3)
         # Handle a queue clear while playing a track
         if track_queue:
