@@ -1,7 +1,8 @@
 from discord.ext import commands, tasks
+import requests
 import discord
 import asyncio
-import requests
+import random
 import os
 
 intents = discord.Intents().all()
@@ -13,25 +14,27 @@ music_lib_dir = "music"
 music_queue = []
 
 
-@bot.command(name='play', help='To play song')
-async def play(ctx, music_track):
+@bot.command(name='play', help='Plays a track specified by user')
+async def play(ctx, music_track=None):
     voice_client = ctx.message.guild.voice_client
     async with ctx.typing():
-        if not play_track.is_running():
-            play_track.start(ctx)
-        if not voice_client:   #check if user issuing command is connected to a channel
-            if not ctx.message.author.voice:    #if not, write error
+        if not voice_client:   # check if user issuing command is connected to a channel
+            if not ctx.message.author.voice:    # if not, write error
                 await ctx.send("{} is not connected to a voice channel".format(ctx.message.author.name))
                 return
-            else:   #attempt connection to voice channel
+            else:   # attempt connection to voice channel
                 channel = ctx.message.author.voice.channel
             await channel.connect()
 
-    music_queue.append(music_track)
-    await ctx.send('**Added to queue:** {}'.format(music_track))
+    if music_track:
+        music_queue.append(music_track)
+        await ctx.send('**Added to queue:** {}'.format(music_track))
+
+    if not play_track.is_running():
+        play_track.start(ctx)
 
 
-@bot.command(name='pause', help='This command pauses the song')
+@bot.command(name='pause', help='This command pauses the track')
 async def pause(ctx):
     voice_client = ctx.message.guild.voice_client
     if voice_client.is_playing():
@@ -40,7 +43,7 @@ async def pause(ctx):
         await ctx.send("The bot is not playing anything at the moment.")
 
 
-@bot.command(name='resume', help='Resumes the song')
+@bot.command(name='resume', help='Resumes playing')
 async def resume(ctx):
     voice_client = ctx.message.guild.voice_client
     if voice_client.is_paused():
@@ -49,11 +52,11 @@ async def resume(ctx):
         await ctx.send("The bot was not playing anything before this. Use play command")
 
 
-@bot.command(name='skip', help='Skips the current song')
+@bot.command(name='skip', help='Skips the current track')
 async def skip(ctx):
     voice_client = ctx.message.guild.voice_client
     if voice_client.is_playing():
-        await voice_client.stop()
+        voice_client.stop()
     else:
         await ctx.send("The bot is not playing anything at the moment.")
 
@@ -68,9 +71,9 @@ async def stop(ctx):
 
 @bot.command(name='list', help='Returns a list of all tracks in library')
 async def list_tracks(ctx):
-    song_list = os.listdir(music_lib_dir)
+    track_list = os.listdir(music_lib_dir)
     message_header = "Here's a list of all tracks on the system:"
-    await ctx.send(format_song_list(song_list, message_header))
+    await ctx.send(format_track_list(track_list, message_header))
 
 
 @bot.command(name='queue', help='Returns the current queue')
@@ -80,10 +83,19 @@ async def queue(ctx):
         await ctx.send("Queue is currently empty")
         return
     message_header = "Current queue:"
-    await ctx.send(format_song_list(music_queue, message_header))
+    await ctx.send(format_track_list(music_queue, message_header))
 
 
-@bot.command(name='add', help='Adds song to library')
+@bot.command(name='shuffle', help="Fills the queue with random tracks from the library")
+async def shuffle(ctx):
+    global music_queue
+    track_list = os.listdir(music_lib_dir)
+    random.shuffle(track_list)
+    music_queue += track_list
+    await ctx.send("Queue now filled with a shuffled playlist")
+
+
+@bot.command(name='add', help='Adds a track to library')
 async def add(ctx):  # triggers when a message is sent
     if ctx.message.attachments:  # if message has an attached file or image
         for attachment in ctx.message.attachments:
@@ -108,6 +120,8 @@ async def play_track(ctx):
         music_path = os.path.join(music_lib_dir, music_track)
         if not os.path.exists(music_path):
             await ctx.send("**Does not exist:** {}".format(music_track))
+            music_queue.pop(0)
+            return
         voice_channel.play(discord.FFmpegPCMAudio(executable="ffmpeg", source=music_path))
         await ctx.send("**Now Playing:** {}".format(music_track))
         while voice_channel.is_playing():
@@ -117,7 +131,7 @@ async def play_track(ctx):
             music_queue.pop(0)
 
 
-def format_song_list(song_list, message_header="Here's a list"):
+def format_track_list(song_list, message_header="Here's a list"):
     message = "{} \n```\n".format(message_header)
     for s in song_list:
         message += (s + '\n')
