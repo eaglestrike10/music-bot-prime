@@ -10,12 +10,12 @@ client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='!', intents=intents)
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 file_formats = ["audio/mpeg", "video/webm"]
-music_lib_dir = "music"
-music_queue = []
+track_lib_dir = "music"
+track_queue = []
 
 
 @bot.command(name='play', help='Plays a track specified by user')
-async def play(ctx, music_track=None):
+async def play(ctx, track_name=None):
     voice_client = ctx.message.guild.voice_client
     async with ctx.typing():
         if not voice_client:   # check if user issuing command is connected to a channel
@@ -26,10 +26,12 @@ async def play(ctx, music_track=None):
                 channel = ctx.message.author.voice.channel
             await channel.connect()
 
-    if music_track:
-        music_queue.append(music_track)
-        await ctx.send('**Added to queue:** {}'.format(music_track))
-
+    if track_name:
+        if search_library(track_name):
+            track_queue.append(track_name)
+            await ctx.send('**Added to queue:** {}'.format(track_name))
+        else:
+            await ctx.send("**Does not exist:** {}".format(track_name))
     if not play_track.is_running():
         play_track.start(ctx)
 
@@ -63,35 +65,35 @@ async def skip(ctx):
 
 @bot.command(name='stop', help='Stops playing, clears the queue, and disconnect the bot')
 async def stop(ctx):
-    global music_queue
+    global track_queue
     voice_client = ctx.message.guild.voice_client
     await voice_client.disconnect()  # disconnect
-    music_queue = []
+    track_queue = []
 
 
 @bot.command(name='list', help='Returns a list of all tracks in library')
 async def list_tracks(ctx):
-    track_list = os.listdir(music_lib_dir)
+    track_list = os.listdir(track_lib_dir)
     message_header = "Here's a list of all tracks on the system:"
     await ctx.send(format_track_list(track_list, message_header))
 
 
 @bot.command(name='queue', help='Returns the current queue')
 async def queue(ctx):
-    global music_queue
-    if not music_queue:
+    global track_queue
+    if not track_queue:
         await ctx.send("Queue is currently empty")
         return
     message_header = "Current queue:"
-    await ctx.send(format_track_list(music_queue, message_header))
+    await ctx.send(format_track_list(track_queue, message_header))
 
 
 @bot.command(name='shuffle', help="Fills the queue with random tracks from the library")
 async def shuffle(ctx):
-    global music_queue
-    track_list = os.listdir(music_lib_dir)
+    global track_queue
+    track_list = os.listdir(track_lib_dir)
     random.shuffle(track_list)
-    music_queue += track_list
+    track_queue += track_list
     await ctx.send("Queue now filled with a shuffled playlist")
 
 
@@ -100,10 +102,10 @@ async def add(ctx):  # triggers when a message is sent
     if ctx.message.attachments:  # if message has an attached file or image
         for attachment in ctx.message.attachments:
             if attachment.content_type in file_formats:  # check attachment type
-                if attachment.filename not in os.listdir(music_lib_dir):  # check if file already exists
+                if attachment.filename not in os.listdir(track_lib_dir):  # check if file already exists
                     r = requests.get(attachment.url, allow_redirects=True)  # if not, download file from url
                     # write contents of download request to folder
-                    open(os.path.join(music_lib_dir, attachment.filename), 'wb').write(r.content)
+                    open(os.path.join(track_lib_dir, attachment.filename), 'wb').write(r.content)
                     await ctx.send("Added track: {}".format(attachment.filename))
                 else:
                     await ctx.send("Track is already in library: {}".format(attachment.filename))
@@ -115,26 +117,31 @@ async def add(ctx):  # triggers when a message is sent
 async def play_track(ctx):
     server = ctx.message.guild
     voice_channel = server.voice_client
-    while len(music_queue) > 0:
-        music_track = music_queue[0]
-        music_path = os.path.join(music_lib_dir, music_track)
-        if not os.path.exists(music_path):
-            await ctx.send("**Does not exist:** {}".format(music_track))
-            music_queue.pop(0)
+    while len(track_queue) > 0:
+        track_name = track_queue[0]
+        track_path = os.path.join(track_lib_dir, track_name)
+        if not os.path.exists(track_path):
+            await ctx.send("**Does not exist:** {}".format(track_name))
+            track_queue.pop(0)
             return
-        voice_channel.play(discord.FFmpegPCMAudio(executable="ffmpeg", source=music_path))
-        await ctx.send("**Now Playing:** {}".format(music_track))
+        voice_channel.play(discord.FFmpegPCMAudio(executable="ffmpeg", source=track_path))
+        await ctx.send("**Now Playing:** {}".format(track_name))
         while voice_channel.is_playing():
             await asyncio.sleep(3)
         # Handle a queue clear while playing a track
-        if music_queue:
-            music_queue.pop(0)
+        if track_queue:
+            track_queue.pop(0)
 
 
-def format_track_list(song_list, message_header="Here's a list"):
+def search_library(track_name):
+    track_path = os.path.join(track_lib_dir, track_name)
+    return os.path.exists(track_path)
+
+
+def format_track_list(track_list, message_header="Here's a list"):
     message = "{} \n```\n".format(message_header)
-    for s in song_list:
-        message += (s + '\n')
+    for track_name in track_list:
+        message += (track_name + '\n')
     message += "\n```"
 
     return message
