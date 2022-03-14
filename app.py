@@ -4,6 +4,7 @@ import discord
 import asyncio
 import random
 import os
+import difflib
 
 intents = discord.Intents().all()
 client = discord.Client(intents=intents)
@@ -169,6 +170,13 @@ async def play_track(ctx):
             if track_queue:
                 track_queue.pop(0)
 
+def keyword_search(keywords):
+    #search and find closest match to keywords in the track library. Return only 1 closest match. Cutoff represents the match threshold.
+        matches = difflib.get_close_matches(keywords,os.listdir(track_lib_dir), n= 1, cutoff= 0.6 ) 
+        if not matches: #if there are no matches, return something to indicate this
+            return 
+        else:   #if there is a match, search the library for that match and send the approrpiate path to play
+            search_library(matches)
 
 def search_library(track_name):
     track_path = os.path.join(track_lib_dir, track_name)
