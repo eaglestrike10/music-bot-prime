@@ -133,3 +133,6 @@ dmypy.json
 
 # Music directory
 /music
+
+# Track list txt file
+track_list.txt
