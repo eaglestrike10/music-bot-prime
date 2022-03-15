@@ -4,7 +4,6 @@ import discord
 import asyncio
 import random
 import os
-# import difflib    Defunct for now
 from fuzzywuzzy import process    #more comprehensive string comparison library
 
 intents = discord.Intents().all()
@@ -191,8 +190,7 @@ def keyword_search(keywords):
     track_list = os.listdir(track_lib_dir)
     for i in range(len(track_list)):
         track_list[i] = track_list[i]
-    #matches = difflib.get_close_matches(keywords, os.listdir(track_lib_dir), n=1, cutoff=0.2)
-    match = process.extractOne(keywords, track_list)    #match using new library
+    match, ratio = process.extractOne(keywords, track_list)    #match using new library
     if not match:  # if there are no matches, return something to indicate this
         return
     else:  # if there is a match, search the library for that match and send the appropriate path to play
