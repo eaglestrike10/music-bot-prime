@@ -30,9 +30,7 @@ async def play(ctx, *args):
             await channel.connect()
 
     if args:
-        track_name = ""
-        for arg in args:
-            track_name += arg
+        track_name = "".join(args)
         track_name = keyword_search(track_name)
         await ctx.send("**Closest match:** {}".format(track_name))
         if track_name:
