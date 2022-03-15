@@ -194,7 +194,10 @@ def keyword_search(keywords):
     if not match:  # if there are no matches, return something to indicate this
         return
     else:  # if there is a match, search the library for that match and send the appropriate path to play
-        return match
+        if ratio > 0.6:
+            return match
+        else:
+            return
 
 
 def search_library(track_name):
