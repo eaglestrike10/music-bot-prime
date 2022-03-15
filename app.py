@@ -4,7 +4,7 @@ import discord
 import asyncio
 import random
 import os
-import difflib
+# import difflib    Defunct for now
 from fuzzywuzzy import process    #more comprehensive string comparison library
 
 intents = discord.Intents().all()
