@@ -12,6 +12,7 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 file_formats = ["audio/mpeg", "video/webm"]
 track_lib_dir = "music"
 track_list_file = "track_list.txt"
+repeat_enable = False
 track_queue = []
 
 
@@ -147,6 +148,18 @@ async def add(ctx):  # triggers when a message is sent
                     await ctx.send("Unsupported file format {}".format(attachment.content_type))
 
 
+@bot.command(name= 'repeat', help= 'Toggles repeat of track currently playing')
+async def repeat(ctx):
+    async with ctx.typing():
+        if repeat_enable:
+            repeat_enable = False
+            await ctx.send("**Repeat** disabled")
+        else:
+            repeat_enable = True
+            await ctx.send("**Repeat** enabled")
+
+
+
 @tasks.loop(seconds=5)
 async def play_track(ctx):
     async with ctx.typing():
@@ -166,7 +179,7 @@ async def play_track(ctx):
             while voice_channel.is_playing() or voice_channel.is_paused():
                 await asyncio.sleep(3)
             # Handle a queue clear while playing a track
-            if track_queue:
+            if track_queue and not repeat_enable:
                 track_queue.pop(0)
 
 
