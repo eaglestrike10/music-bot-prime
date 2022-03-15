@@ -38,7 +38,7 @@ async def play(ctx, *args):
         else:
             await ctx.send("**Does not exist:** {}".format(track_name))
         if not play_track.is_running():
-            play_track.start(track_name)
+            play_track.start(ctx)
 
 
 @bot.command(name='pause', help='This command pauses the track')
