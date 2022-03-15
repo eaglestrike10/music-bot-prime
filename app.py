@@ -1,10 +1,10 @@
 from discord.ext import commands, tasks
+from fuzzywuzzy import process
 import requests
 import discord
 import asyncio
 import random
 import os
-from fuzzywuzzy import process    #more comprehensive string comparison library
 
 intents = discord.Intents().all()
 client = discord.Client(intents=intents)
@@ -190,7 +190,7 @@ def keyword_search(keywords):
     track_list = os.listdir(track_lib_dir)
     for i in range(len(track_list)):
         track_list[i] = track_list[i]
-    match, ratio = process.extractOne(keywords, track_list)    #match using new library
+    match, ratio = process.extractOne(keywords, track_list)    # match using fuzzywuzzy library
     if not match:  # if there are no matches, return something to indicate this
         return
     else:  # if there is a match, search the library for that match and send the appropriate path to play
