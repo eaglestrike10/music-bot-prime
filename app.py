@@ -1,4 +1,5 @@
 from discord.ext import commands, tasks
+from fuzzywuzzy import process
 import requests
 import discord
 import asyncio
@@ -16,25 +17,28 @@ track_queue = []
 
 
 @bot.command(name='play', help='Plays a track specified by user')
-async def play(ctx, track_name=None):
+async def play(ctx, *args):
     voice_client = ctx.message.guild.voice_client
     async with ctx.typing():
-        if not voice_client:   # check if user issuing command is connected to a channel
-            if not ctx.message.author.voice:    # if not, write error
+        if not voice_client:  # check if user issuing command is connected to a channel
+            if not ctx.message.author.voice:  # if not, write error
                 await ctx.send("{} is not connected to a voice channel".format(ctx.message.author.name))
                 return
-            else:   # attempt connection to voice channel
+            else:  # attempt connection to voice channel
                 channel = ctx.message.author.voice.channel
             await channel.connect()
 
-    if track_name:
-        if search_library(track_name):
+    if args:
+        track_name = "".join(args)
+        track_name = keyword_search(track_name)
+        await ctx.send("**Closest match:** {}".format(track_name))
+        if track_name:
             track_queue.append(track_name)
             await ctx.send('**Added to queue:** {}'.format(track_name))
         else:
             await ctx.send("**Does not exist:** {}".format(track_name))
-    if not play_track.is_running():
-        play_track.start(ctx)
+        if not play_track.is_running():
+            play_track.start(ctx)
 
 
 @bot.command(name='pause', help='This command pauses the track')
@@ -70,7 +74,7 @@ async def stop(ctx):
     track_queue = []
     voice_client = ctx.message.guild.voice_client
     if voice_client:
-        voice_client.disconnect()  # disconnect
+        await voice_client.disconnect()  # disconnect
     await ctx.send("**Stopped playback and cleared queue**")
 
 
@@ -147,27 +151,53 @@ async def add(ctx):  # triggers when a message is sent
                     await ctx.send("Unsupported file format {}".format(attachment.content_type))
 
 
+@bot.command(name='search', help='Searches the library for a track')
+async def search(ctx, *args):
+    search_string = ""
+    for arg in args:
+        search_string += (str(arg) + " ")
+    if search_string:
+        await ctx.send("**Closest match:** {}".format(keyword_search(search_string)))
+    else:
+        await ctx.send("**No string provided:**")
+
+
 @tasks.loop(seconds=5)
 async def play_track(ctx):
-    async with ctx.typing():
-        server = ctx.message.guild
-        voice_channel = server.voice_client
-        while len(track_queue) > 0:
-            track_name = track_queue[0]
-            track_path = os.path.join(track_lib_dir, track_name)
-            if not os.path.exists(track_path):
-                await ctx.send("**Does not exist:** {}".format(track_name))
-                track_queue.pop(0)
-                return
-            if voice_channel:
-                voice_channel.play(discord.FFmpegPCMAudio(executable="ffmpeg", source=track_path))
-            await ctx.send("**Now Playing:** {}".format(track_name))
-            # Wait if voice channel is playing or is paused
-            while voice_channel.is_playing() or voice_channel.is_paused():
-                await asyncio.sleep(3)
-            # Handle a queue clear while playing a track
-            if track_queue:
-                track_queue.pop(0)
+    server = ctx.message.guild
+    voice_channel = server.voice_client
+    while len(track_queue) > 0:
+        track_name = track_queue[0]
+        track_path = os.path.join(track_lib_dir, track_name)
+        if not os.path.exists(track_path):
+            await ctx.send("**Does not exist:** {}".format(track_name))
+            track_queue.pop(0)
+            return
+        if voice_channel:
+            voice_channel.play(discord.FFmpegPCMAudio(executable="ffmpeg", source=track_path))
+        await ctx.send("**Now Playing:** {}".format(track_name))
+        # Wait if voice channel is playing or is paused
+        while voice_channel.is_playing() or voice_channel.is_paused():
+            await asyncio.sleep(3)
+        # Handle a queue clear while playing a track
+        if track_queue:
+            track_queue.pop(0)
+
+
+def keyword_search(keywords):
+    # search and find closest match to keywords in the track library. Return only 1 closest match. Cutoff represents
+    # the match threshold.
+    track_list = os.listdir(track_lib_dir)
+    for i in range(len(track_list)):
+        track_list[i] = track_list[i]
+    match, ratio = process.extractOne(keywords, track_list)    # match using fuzzywuzzy library
+    if not match:  # if there are no matches, return something to indicate this
+        return
+    else:  # if there is a match, search the library for that match and send the appropriate path to play
+        if ratio > 0.6:
+            return match
+        else:
+            return
 
 
 def search_library(track_name):
