@@ -74,7 +74,7 @@ async def stop(ctx):
     track_queue = []
     voice_client = ctx.message.guild.voice_client
     if voice_client:
-        voice_client.disconnect()  # disconnect
+        await voice_client.disconnect()  # disconnect
     await ctx.send("**Stopped playback and cleared queue**")
 
 
