@@ -37,8 +37,9 @@ async def play(ctx, *args):
             await ctx.send('**Added to queue:** {}'.format(track_name))
         else:
             await ctx.send("**Does not exist:** {}".format(track_name))
-        if not play_track.is_running():
-            play_track.start(ctx)
+
+    if not play_track.is_running():
+        play_track.start(ctx)
 
 
 @bot.command(name='pause', help='This command pauses the track')
@@ -76,6 +77,7 @@ async def stop(ctx):
     if voice_client:
         await voice_client.disconnect()  # disconnect
     await ctx.send("**Stopped playback and cleared queue**")
+    play_track.stop()
 
 
 @bot.command(name='list', help='Returns a list of all tracks in library as a txt file')
@@ -164,8 +166,11 @@ async def search(ctx, *args):
 
 @tasks.loop(seconds=5)
 async def play_track(ctx):
+    await asyncio.sleep(3)
     server = ctx.message.guild
     voice_channel = server.voice_client
+    if not voice_channel:
+        return
     while len(track_queue) > 0:
         track_name = track_queue[0]
         track_path = os.path.join(track_lib_dir, track_name)
