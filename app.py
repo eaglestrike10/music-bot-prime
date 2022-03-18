@@ -37,6 +37,27 @@ async def play(ctx, track_name=None):
         play_track.start(ctx)
 
 
+@bot.command(name= 'playtop', help= 'Adds a track specified by the user to the top of the queue')
+async def playtop(ctx, track_name = None):
+    voice_client = ctx.message.guild.voice_client
+    async with ctx.typing():
+        if not voice_client:   # check if user issuing command is connected to a channel
+            if not ctx.message.author.voice:    # if not, write error
+                await ctx.send("{} is not connected to a voice channel".format(ctx.message.author.name))
+                return
+            else:   # attempt connection to voice channel
+                channel = ctx.message.author.voice.channel
+            await channel.connect()
+
+    if track_name:
+        if search_library(track_name):
+            track_queue.insert(0, track_name)   #add to front of queue. All other functions are identical to play.
+            await ctx.send('**Added to queue:** {}'.format(track_name))
+        else:
+            await ctx.send("**Does not exist:** {}".format(track_name))
+    if not play_track.is_running():
+        play_track.start(ctx)
+
 @bot.command(name='pause', help='This command pauses the track')
 async def pause(ctx):
     voice_client = ctx.message.guild.voice_client
