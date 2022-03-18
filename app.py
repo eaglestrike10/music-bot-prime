@@ -166,7 +166,6 @@ async def search(ctx, *args):
 
 @tasks.loop(seconds=5)
 async def play_track(ctx):
-    await asyncio.sleep(3)
     server = ctx.message.guild
     voice_channel = server.voice_client
     if not voice_channel:
