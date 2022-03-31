@@ -1,3 +1,4 @@
+import re
 from discord.ext import commands, tasks
 from fuzzywuzzy import process
 import requests
@@ -161,21 +162,31 @@ async def shuffle(ctx, num_shuffle=10):
     await ctx.send("Queue now filled with a shuffled playlist")
 
 
+def normalize_filename(filename_string: str):
+    filename, extension = filename_string.split('.')
+
+    regex = re.compile(r"(\W|_)+", re.ASCII | re.MULTILINE)
+
+    # Applies the regex expression substituting all matches by spaces
+    normal_filename = regex.sub(' ', filename)
+
+    return f'{normal_filename}.{extension}'
+
 @bot.command(name='add', help='Adds a track to library')
 async def add(ctx):  # triggers when a message is sent
     if ctx.message.attachments:  # if message has an attached file or image
         for attachment in ctx.message.attachments:
             if attachment.content_type in file_formats:  # check attachment type
-                if attachment.filename not in os.listdir(track_lib_dir):  # check if file already exists
+                filename = normalize_filename(attachment.filename)
+                if filename not in os.listdir(track_lib_dir):  # check if file already exists
                     r = requests.get(attachment.url, allow_redirects=True)  # if not, download file from url
                     # write contents of download request to folder
-                    open(os.path.join(track_lib_dir, attachment.filename), 'wb').write(r.content)
-                    await ctx.send("Added track: {}".format(attachment.filename))
+                    open(os.path.join(track_lib_dir, filename), 'wb').write(r.content)
+                    await ctx.send("Added track: {}".format(filename))
                 else:
-                    await ctx.send("Track is already in library: {}".format(attachment.filename))
+                    await ctx.send("Track is already in library: {}".format(filename))
             else:
                 await ctx.send("Unsupported file format {}".format(attachment.content_type))
-
 
 @bot.command(name='search', help='Searches the library for a track')
 async def search(ctx, *args):
