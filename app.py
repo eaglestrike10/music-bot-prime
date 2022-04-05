@@ -163,14 +163,26 @@ async def shuffle(ctx, num_shuffle=10):
 
 
 def normalize_filename(filename_string: str):
-    filename, extension = filename_string.split('.')
+    filename, extension = os.path.splitext(filename_string)
 
     regex = re.compile(r"(\W|_)+", re.ASCII | re.MULTILINE)
 
     # Applies the regex expression substituting all matches by spaces
     normal_filename = regex.sub(' ', filename)
 
-    return f'{normal_filename}.{extension}'
+    return f'{normal_filename}{extension}'
+
+
+def normalize_library():
+    # Iterate renaming process for every single track in the track library
+    for filename in os.listdir(track_lib_dir):
+        # get old filename path
+        old_name = os.path.join(track_lib_dir, filename)
+        # generate corrected filename with path
+        new_name = os.path.join(track_lib_dir, normalize_filename(filename))
+        # replace old filename with new filename
+        os.rename(old_name, new_name)
+
 
 @bot.command(name='add', help='Adds a track to library')
 async def add(ctx):  # triggers when a message is sent
@@ -187,6 +199,7 @@ async def add(ctx):  # triggers when a message is sent
                     await ctx.send("Track is already in library: {}".format(filename))
             else:
                 await ctx.send("Unsupported file format {}".format(attachment.content_type))
+
 
 @bot.command(name='search', help='Searches the library for a track')
 async def search(ctx, *args):
@@ -251,4 +264,5 @@ def search_library(track_name):
 
 
 if __name__ == "__main__":
+    normalize_library()
     bot.run(DISCORD_TOKEN)
