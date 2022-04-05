@@ -15,6 +15,15 @@ file_formats = ["audio/mpeg", "video/webm"]
 track_lib_dir = "music"
 track_list_file = "track_list.txt"
 track_queue = []
+#######normalize library when bot is started
+#iterate renaming process for every single track in the music directory
+for filename in os.listdir(track_lib_dir):
+    #get old filename path
+    old_name = os.path.join(track_lib_dir, filename)
+    #generate corrected filename with path
+    new_name = os.path.join(track_lib_dir, normalize_filename(filename))
+    #replace old filename with new filename
+    os.rename(old_name, new_name)
 
 
 @bot.command(name='play', help='Plays a track specified by user')
