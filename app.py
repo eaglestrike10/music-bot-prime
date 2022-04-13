@@ -13,6 +13,8 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 file_formats = ["audio/mpeg", "video/webm"]
 track_lib_dir = "music"
+pl_lib_dir = "playlist"    #directory to playlists
+selected_pl = ""           #currently selected playlist
 track_list_file = "track_list.txt"
 track_queue = []
 
@@ -162,6 +164,105 @@ async def shuffle(ctx, num_shuffle=10):
     await ctx.send("Queue now filled with a shuffled playlist")
 
 
+######################################### [ PLAYLIST COMMANDS ] #########################################
+#use track_lib_dir as currently selected playlist? or create new variable?
+#track library will most likely need some restructuring
+
+@bot.command(name='plc', help="Creates a playlist with the specified name")
+async def plc(ctx, *args):
+    ##concatinate all arguments for playlist name into single string
+    name = ""
+    for arg in args:
+        name +=(str(arg)+" ")
+    name += ".txt"
+    #create hypothetical path to file
+    playlistPath = os.path.join(pl_lib_dir, name)
+    
+
+    #check if playlist with specified name already exists
+    if os.path.exists(playlistPath):
+        await ctx.send("Specified playlist already exists!")
+        return
+    #create playlist if not duplicate
+    else:
+        #create empty txt file with playlist name
+        f = open(playlistPath, 'rw')
+        f.close
+        await ctx.send("Playlist created!")
+        return
+
+
+
+@bot.command(name='pls', help="Selects playlist with specified name")
+async def pls(ctx, *args):
+    name = ""
+    #concatenate args from command to create name to search for
+    for arg in args:
+        name +=(str(arg)+" ")
+
+    #search for matching playlist
+    match = pl_search(name)
+    #if a match is found
+    if match:
+        #adjust selected playlist path 
+        selected_pl = match
+        #send success message 
+        await ctx.send("***" + match + "*** is now the selected playlist")
+        return
+    else:
+        #if no match, send failure message
+        await ctx.send("There is no playlist with that name.")
+        return
+
+
+@bot.command(name='pld', help="Deletes a playlist with the specified name")
+async def pld(ctx, *args):
+    ##concatinate all arguments for playlist name into single string
+    name = ""
+    for arg in args:
+        name +=(str(arg)+" ")
+    name += ".txt"
+    #create hypothetical path to file
+    playlistPath = os.path.join(pl_lib_dir, name)
+
+    #check if playlist with specified name already exists
+    if os.path.exists(playlistPath):
+        #if it does, delete it
+        os.remove(playlistPath)
+        await ctx.send("Playlist deleted!")
+        return
+    #create playlist if not duplicate
+    else:
+        #create empty txt file with playlist name
+        await ctx.send("Specified playlist does not exists!")
+        return
+
+@bot.command(name='pla', help="Adds a track to the currently selected playlist")
+async def pla(ctx, *args):
+    #work in progress
+    
+@bot.command(name='plr', help="Removes a track to the currently selected playlist")
+async def plr(ctx, *args):
+    #work in progress
+
+@bot.command(name='listpl', help="Lists all available playlists")
+async def plr(ctx):
+    pl_list = os.listdir(pl_lib_dir)
+    message_header = "Here's a list of all playlists on the system:"
+
+    # Create txt file with pl list
+    with open(pl_list_file, "w+") as file:
+        for pl in pl_list:
+            file.writelines(pl + "\n")
+
+    # Read pl list file and send as message
+    with open(pl_list_file, "rb") as file:
+        await ctx.send(message_header, file=discord.File(file, pl_list_file))
+
+    # Clean up
+    os.remove(pl_list_file)
+
+
 def normalize_filename(filename_string: str):
     filename, extension = os.path.splitext(filename_string)
 
@@ -241,6 +342,19 @@ async def play_track(ctx):
     if voice_client:
         await voice_client.disconnect()  # disconnect
 
+######### PLAYLIST VERSION OF KEYWORD SEARCH ##############
+def pl_search(keywords):
+    # search and find closest match to keywords in the track library. Return only 1 closest match. Cutoff represents
+    # the match threshold.
+    pl_list = os.listdir(pl_lib_dir)
+    match, ratio = process.extractOne(keywords, pl_list)    # match using fuzzywuzzy library
+    if not match:  # if there are no matches, return something to indicate this
+        return
+    else:  # if there is a match, return matchj
+        if ratio > 0.6:
+            return match
+        else:
+            return
 
 def keyword_search(keywords):
     # search and find closest match to keywords in the track library. Return only 1 closest match. Cutoff represents
