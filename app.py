@@ -19,6 +19,8 @@ track_list_file = "track_list.txt"
 track_queue = []
 
 
+######################################### [ TRACK MANIPULATION FUNCTIONS ] #########################################
+
 @bot.command(name='play', help='Plays a track specified by user')
 async def play(ctx, *args):
     voice_client = ctx.message.guild.voice_client
@@ -111,23 +113,7 @@ async def stop(ctx):
     play_track.stop()
 
 
-@bot.command(name='list', help='Returns a list of all tracks in library as a txt file')
-async def list_tracks(ctx):
-    track_list = os.listdir(track_lib_dir)
-    message_header = "Here's a list of all tracks on the system:"
-
-    # Create txt file with track list
-    with open(track_list_file, "w+") as file:
-        for track in track_list:
-            file.writelines(track + "\n")
-
-    # Read track list file and send as message
-    with open(track_list_file, "rb") as file:
-        await ctx.send(message_header, file=discord.File(file, track_list_file))
-
-    # Clean up
-    os.remove(track_list_file)
-
+######################################### [ QUEUE FUNCTIONS ] #########################################
 
 @bot.command(name='queue', help='Returns the current queue')
 async def queue(ctx):
@@ -162,6 +148,54 @@ async def shuffle(ctx, num_shuffle=10):
     # Adds 10 random tracks to shuffle
     track_queue += track_list[0:num_shuffle]
     await ctx.send("Queue now filled with a shuffled playlist")
+
+
+######################################### [ LIBRARY FUNCTIONS ] #########################################
+
+@bot.command(name='add', help='Adds a track to library')
+async def add(ctx):  # triggers when a message is sent
+    if ctx.message.attachments:  # if message has an attached file or image
+        for attachment in ctx.message.attachments:
+            if attachment.content_type in file_formats:  # check attachment type
+                filename = normalize_filename(attachment.filename)
+                if filename not in os.listdir(track_lib_dir):  # check if file already exists
+                    r = requests.get(attachment.url, allow_redirects=True)  # if not, download file from url
+                    # write contents of download request to folder
+                    open(os.path.join(track_lib_dir, filename), 'wb').write(r.content)
+                    await ctx.send("Added track: {}".format(filename))
+                else:
+                    await ctx.send("Track is already in library: {}".format(filename))
+            else:
+                await ctx.send("Unsupported file format {}".format(attachment.content_type))
+
+
+@bot.command(name='search', help='Searches the library for a track')
+async def search(ctx, *args):
+    search_string = ""
+    for arg in args:
+        search_string += (str(arg) + " ")
+    if search_string:
+        await ctx.send("**Closest match:** {}".format(keyword_search(search_string)))
+    else:
+        await ctx.send("**No string provided:**")
+
+
+@bot.command(name='list', help='Returns a list of all tracks in library as a txt file')
+async def list_tracks(ctx):
+    track_list = os.listdir(track_lib_dir)
+    message_header = "Here's a list of all tracks on the system:"
+
+    # Create txt file with track list
+    with open(track_list_file, "w+") as file:
+        for track in track_list:
+            file.writelines(track + "\n")
+
+    # Read track list file and send as message
+    with open(track_list_file, "rb") as file:
+        await ctx.send(message_header, file=discord.File(file, track_list_file))
+
+    # Clean up
+    os.remove(track_list_file)
 
 
 ######################################### [ PLAYLIST COMMANDS ] #########################################
@@ -237,16 +271,74 @@ async def pld(ctx, *args):
         await ctx.send("Specified playlist does not exists!")
         return
 
+
 @bot.command(name='pla', help="Adds a track to the currently selected playlist")
 async def pla(ctx, *args):
-    #work in progress
+    playlist_path = os.path.join(pl_lib_dir, selected_pl)
+    f = open(playlist_path, 'r')
+    track_list = f.readlines()
+    #concatinate user keywords into one string
+    for arg in args:
+        track_name +=(str(arg)+" ")
+    
+    #search selected playlist to see if the song already exists
+    match = pl_keyword_search(track_name)
+    
+    if match:
+        #check to see if track already exists in selected playlist
+        for track in track_list:
+            if track.strip("\n") == match:
+                await ctx.send( "***" + match + "***" + " is already in the playlist " + selected_pl + ".")
+                return
+
+        #if track does not exist in playlist already, add it
+        f = open(playlist_path, 'a')
+        f.write(match + "\n")
+        return
+    else:
+        #if no track match is found
+        await ctx.send("Specified track does not exist")
+        return
+
     
 @bot.command(name='plr', help="Removes a track to the currently selected playlist")
 async def plr(ctx, *args):
-    #work in progress
+    exists = False
+    #list path to the selected playlist
+    playlist_path = os.path.join(pl_lib_dir, selected_pl)
+    #read all tracks in to playlist into a track list
+    f = open(playlist_path, 'r')
+    track_list = f.readlines()
+
+    #concatenate argument inputs for keyword search
+    for arg in args:
+        track_name +=(str(arg)+" ")
+
+    #keyword search
+    match = pl_keyword_search(track_name)
+
+    #if there is a keyword match
+    if match:
+        for track in track_list:
+            if track.strip("\n") == match:
+                exists = True
+        
+        #if the entry exisits in the playlist, rewrite playlist while removing entry we want deleted
+        if(exists):
+            with open(playlist_path, 'w') as f:
+                for track in track_list:
+                    if track.strip("\n") != match:
+                        f.write(track)
+        return
+
+    #if no match is found for keywords
+    else:
+        await ctx.send("Specified track does not exist")
+        return
+
 
 @bot.command(name='listpl', help="Lists all available playlists")
-async def plr(ctx):
+async def listpl(ctx):
     pl_list = os.listdir(pl_lib_dir)
     message_header = "Here's a list of all playlists on the system:"
 
@@ -262,6 +354,8 @@ async def plr(ctx):
     # Clean up
     os.remove(pl_list_file)
 
+
+######################################### [ NON COMMAND FUNCTIONS ] #########################################
 
 def normalize_filename(filename_string: str):
     filename, extension = os.path.splitext(filename_string)
@@ -283,34 +377,6 @@ def normalize_library():
         new_name = os.path.join(track_lib_dir, normalize_filename(filename))
         # replace old filename with new filename
         os.rename(old_name, new_name)
-
-
-@bot.command(name='add', help='Adds a track to library')
-async def add(ctx):  # triggers when a message is sent
-    if ctx.message.attachments:  # if message has an attached file or image
-        for attachment in ctx.message.attachments:
-            if attachment.content_type in file_formats:  # check attachment type
-                filename = normalize_filename(attachment.filename)
-                if filename not in os.listdir(track_lib_dir):  # check if file already exists
-                    r = requests.get(attachment.url, allow_redirects=True)  # if not, download file from url
-                    # write contents of download request to folder
-                    open(os.path.join(track_lib_dir, filename), 'wb').write(r.content)
-                    await ctx.send("Added track: {}".format(filename))
-                else:
-                    await ctx.send("Track is already in library: {}".format(filename))
-            else:
-                await ctx.send("Unsupported file format {}".format(attachment.content_type))
-
-
-@bot.command(name='search', help='Searches the library for a track')
-async def search(ctx, *args):
-    search_string = ""
-    for arg in args:
-        search_string += (str(arg) + " ")
-    if search_string:
-        await ctx.send("**Closest match:** {}".format(keyword_search(search_string)))
-    else:
-        await ctx.send("**No string provided:**")
 
 
 @tasks.loop(seconds=5)
@@ -342,10 +408,9 @@ async def play_track(ctx):
     if voice_client:
         await voice_client.disconnect()  # disconnect
 
-######### PLAYLIST VERSION OF KEYWORD SEARCH ##############
+
 def pl_search(keywords):
-    # search and find closest match to keywords in the track library. Return only 1 closest match. Cutoff represents
-    # the match threshold.
+    # search and find closest match to keywords in the list of playlists. Return only 1 closest match
     pl_list = os.listdir(pl_lib_dir)
     match, ratio = process.extractOne(keywords, pl_list)    # match using fuzzywuzzy library
     if not match:  # if there are no matches, return something to indicate this
@@ -355,6 +420,22 @@ def pl_search(keywords):
             return match
         else:
             return
+
+
+def pl_keyword_search(keywords):
+    # search and find closest match to keywords in the currently selected playlist. Return only 1 closest match
+    playlistPath = os.path.join(pl_lib_dir, selected_pl)
+    f = open(playlistPath, 'r')
+    track_list = f.readlines()
+    match, ratio = process.extractOne(keywords, track_list)    # match using fuzzywuzzy library
+    if not match:  # if there are no matches, return something to indicate this
+        return
+    else:  # if there is a match, search the library for that match and send the appropriate path to play
+        if ratio > 0.6:
+            return match
+        else:
+            return
+
 
 def keyword_search(keywords):
     # search and find closest match to keywords in the track library. Return only 1 closest match. Cutoff represents
